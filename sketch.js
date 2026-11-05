@@ -11,7 +11,10 @@ let mensajeError = "";
 let captura = null;
 
 function setup() {
-  createCanvas(ANCHO_CANVAS, ALTO_CANVAS);
+  // Creamos el canvas y lo metemos en la columna derecha del layout
+  const lienzo = createCanvas(ANCHO_CANVAS, ALTO_CANVAS);
+  lienzo.parent("columna-camara");
+
   pedirCamara();
 }
 
