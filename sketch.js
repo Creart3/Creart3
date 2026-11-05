@@ -1,6 +1,7 @@
 // --- Configuración ---
+// Canvas cuadrado: el video se recorta en el centro para llenarlo sin deformarse.
 const ANCHO_CANVAS = 640;
-const ALTO_CANVAS = 480;
+const ALTO_CANVAS = 640;
 const ESPERA_MAXIMA_MS = 6000;
 
 // --- Estado de la cámara ---
@@ -75,11 +76,33 @@ async function pedirCamara() {
 }
 
 // Dibuja el video en espejo, como si fuera un reflejo.
+// Recorta un cuadrado del centro del video para llenar el canvas sin deformarlo.
 function dibujarCamaraEspejada() {
+  const anchoVideo = captura.width;
+  const altoVideo = captura.height;
+
+  // Tomamos el lado más chico como tamaño del recorte cuadrado
+  const ladoRecorte = Math.min(anchoVideo, altoVideo);
+
+  // Centramos ese cuadrado dentro del video original
+  const xRecorte = (anchoVideo - ladoRecorte) / 2;
+  const yRecorte = (altoVideo - ladoRecorte) / 2;
+
   push();
   translate(width, 0); // Movemos el origen al borde derecho
   scale(-1, 1); // Invertimos el eje X
-  image(captura, 0, 0, width, height);
+  // image(imagen, xOrigen, yOrigen, anchoOrigen, altoOrigen, x, y, ancho, alto)
+  image(
+    captura,
+    xRecorte,
+    yRecorte,
+    ladoRecorte,
+    ladoRecorte,
+    0,
+    0,
+    width,
+    height
+  );
   pop();
 }
 
