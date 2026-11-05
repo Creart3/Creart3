@@ -109,10 +109,10 @@ function cargarModelos() {
     return;
   }
 
-  // MoveNet en modo multipersona.
+  // MoveNet en modo una sola persona (más liviano que el multipersona).
   // flipped: true hace que ml5 devuelva las X ya invertidas, igual que el video en espejo.
   modeloCuerpo = ml5.bodyPose("MoveNet", {
-    modelType: "MULTIPOSE_LIGHTNING",
+    modelType: "SINGLEPOSE_LIGHTNING",
     flipped: true,
   });
 
