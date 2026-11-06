@@ -31,6 +31,11 @@ function setup() {
   const lienzo = createCanvas(ANCHO_CANVAS, ALTO_CANVAS);
   lienzo.parent("columna-camara");
 
+  // Slideshow de la izquierda: revisamos las imágenes y mostramos la primera.
+  // (Las imágenes ya se cargaron antes, en preload).
+  validarObras();
+  mostrarObraActual();
+
   pedirCamara();
 }
 
@@ -181,6 +186,16 @@ function alternarManos() {
 function keyPressed() {
   if (key === "b" || key === "B") alternarCuerpo();
   if (key === "h" || key === "H") alternarManos();
+
+  // Flechas: cambian de obra. El "return false" evita que la página scrollee.
+  if (keyCode === LEFT_ARROW) {
+    cambiarObra(-1);
+    return false;
+  }
+  if (keyCode === RIGHT_ARROW) {
+    cambiarObra(1);
+    return false;
+  }
 }
 
 // --- Dibujo del video y de las detecciones ---
@@ -372,4 +387,186 @@ function describirErrorCamara(error) {
     default:
       return "No se pudo iniciar la cámara: " + error.message;
   }
+}
+
+// ============================================================
+// Slideshow de obras (columna izquierda)
+// Las imágenes se listan en config.js y viven en la carpeta "imagenes".
+// ============================================================
+
+// Cada elemento guarda: archivo, nombre, ruta, imagen (p5.Image) y si falló.
+let obras = [];
+
+// Posición dentro del array OBRAS de la obra que se está mostrando.
+let indiceObra = 0;
+
+// p5 ejecuta preload() antes de setup(): acá dejamos todas las imágenes listas.
+function preload() {
+  cargarObras();
+}
+
+// Carga todas las imágenes indicadas en OBRAS.
+// loadImage recibe: ruta, callback de éxito y callback de error.
+function cargarObras() {
+  if (typeof OBRAS === "undefined" || OBRAS.length === 0) {
+    console.warn("No hay obras para cargar. Revisá config.js.");
+    return;
+  }
+
+  obras = OBRAS.map((obra) => {
+    const registro = {
+      archivo: obra.archivo,
+      nombre: obra.nombre,
+      ruta: "imagenes/" + obra.archivo,
+      imagen: null,
+      fallo: false,
+    };
+
+    registro.imagen = loadImage(
+      registro.ruta,
+      () => {
+        // Éxito: no hay nada que hacer, preload ya esperó la carga.
+      },
+      (error) => {
+        // Error: marcamos la obra para poder avisar en pantalla y en consola.
+        registro.fallo = true;
+        console.error("No se pudo cargar la imagen: " + registro.ruta, error);
+      }
+    );
+
+    return registro;
+  });
+}
+
+// Compara el tamaño de todas las imágenes contra la primera que cargó bien.
+// Los problemas se muestran en pantalla y en la consola.
+function validarObras() {
+  const avisos = [];
+  const referencia = obras.find((obra) => !obra.fallo && obra.imagen);
+
+  for (const obra of obras) {
+    if (obra.fallo || !obra.imagen) {
+      const mensaje = "No se pudo cargar: " + obra.archivo;
+      avisos.push(mensaje);
+      console.error(mensaje);
+      continue;
+    }
+
+    if (!referencia) continue;
+
+    const ancho = obra.imagen.width;
+    const alto = obra.imagen.height;
+
+    if (ancho !== referencia.imagen.width || alto !== referencia.imagen.height) {
+      const mensaje =
+        obra.archivo +
+        " mide " +
+        ancho +
+        "×" +
+        alto +
+        " y " +
+        referencia.archivo +
+        " mide " +
+        referencia.imagen.width +
+        "×" +
+        referencia.imagen.height;
+      avisos.push("Tamaño distinto: " + mensaje);
+      console.warn("Tamaño distinto:", mensaje);
+    }
+  }
+
+  mostrarAvisos(avisos);
+}
+
+// Escribe los avisos en el panel izquierdo (arriba del área de la obra).
+function mostrarAvisos(avisos) {
+  const contenedor = document.getElementById("avisos-obras");
+  if (!contenedor) return;
+
+  contenedor.innerHTML = avisos
+    .map((texto) => '<p class="aviso">' + texto + "</p>")
+    .join("");
+}
+
+// Devuelve la obra que se está mostrando.
+function obraActual() {
+  return obras[indiceObra];
+}
+
+// Actualiza el nombre de la obra y vuelve a dibujarla.
+function mostrarObraActual() {
+  const obra = obraActual();
+
+  const nombre = document.getElementById("nombre-obra");
+  if (nombre) nombre.textContent = obra ? obra.nombre : "Sin obras";
+
+  redibujarObra();
+}
+
+// Cambia de obra sumando "paso" (+1 derecha, -1 izquierda).
+// El módulo hace que al pasar la última vuelva a la primera.
+function cambiarObra(paso) {
+  if (obras.length === 0) return;
+
+  indiceObra = (indiceObra + paso + obras.length) % obras.length;
+  mostrarObraActual();
+}
+
+// Dibuja la obra actual dentro del área fija de la izquierda.
+// La imagen se escala igual en ancho y alto: nunca se deforma.
+function redibujarObra() {
+  const area = document.getElementById("area-obra");
+  const lienzo = document.getElementById("lienzo-obra");
+  if (!area || !lienzo) return;
+
+  const anchoArea = area.clientWidth;
+  const altoArea = area.clientHeight;
+  if (anchoArea === 0 || altoArea === 0) return; // todavía no hay layout
+
+  // Ajustamos el lienzo al área y a la densidad real de la pantalla,
+  // así la imagen se ve nítida y no borrosa.
+  const densidad = window.devicePixelRatio || 1;
+  lienzo.width = Math.round(anchoArea * densidad);
+  lienzo.height = Math.round(altoArea * densidad);
+
+  const contexto = lienzo.getContext("2d");
+  contexto.setTransform(densidad, 0, 0, densidad, 0, 0);
+  contexto.clearRect(0, 0, anchoArea, altoArea);
+
+  const obra = obraActual();
+
+  if (!obra || obra.fallo || !obra.imagen) {
+    dibujarMensajeObra(contexto, anchoArea, altoArea, "Imagen no disponible");
+    return;
+  }
+
+  // Escala única para ancho y alto = proporción respetada.
+  // Con Math.min la imagen entra completa dentro del área (sin recortes).
+  const escala = Math.min(
+    anchoArea / obra.imagen.width,
+    altoArea / obra.imagen.height
+  );
+  const anchoDibujo = obra.imagen.width * escala;
+  const altoDibujo = obra.imagen.height * escala;
+
+  // Centramos la imagen dentro del área.
+  const x = (anchoArea - anchoDibujo) / 2;
+  const y = (altoArea - altoDibujo) / 2;
+
+  // p5.Image guarda sus píxeles en "imagen.canvas": lo dibujamos tal cual.
+  contexto.drawImage(obra.imagen.canvas, x, y, anchoDibujo, altoDibujo);
+}
+
+// Texto provisorio cuando una imagen no cargó.
+function dibujarMensajeObra(contexto, ancho, alto, mensaje) {
+  contexto.fillStyle = "#ff8a8a";
+  contexto.font = "16px system-ui, sans-serif";
+  contexto.textAlign = "center";
+  contexto.textBaseline = "middle";
+  contexto.fillText(mensaje, ancho / 2, alto / 2);
+}
+
+// Si cambia el tamaño de la ventana, el área cambia: redibujamos la obra.
+function windowResized() {
+  redibujarObra();
 }
