@@ -10,11 +10,24 @@
 
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.10/lib/p5.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ml5@1.4.0/dist/ml5.min.js"></script>
+  <!-- config.js va antes que sketch.js: define el array OBRAS que el sketch usa -->
+  <script src="config.js"></script>
   <script src="sketch.js"></script>
 </head>
 
 <body>
-  <div class="columna-obra"></div>
+  <div class="columna-obra">
+    <!-- Avisos de imágenes que no se pudieron cargar -->
+    <div class="avisos-obras" id="avisos-obras"></div>
+
+    <!-- Área fija donde se dibuja la obra, sin deformarla -->
+    <div class="area-obra" id="area-obra">
+      <canvas class="lienzo-obra" id="lienzo-obra"></canvas>
+    </div>
+
+    <p class="nombre-obra" id="nombre-obra">Cargando obras...</p>
+    <p class="ayuda-obra">Flechas ← → para cambiar de obra</p>
+  </div>
   <div class="columna-camara" id="columna-camara"></div>
 </body>
 

@@ -6,9 +6,68 @@ body {
   background: #14161a;
 }
 
-/* Columna izquierda: reservada para la obra de arte */
+/* Columna izquierda: slideshow de obras */
 .columna-obra {
   min-height: 100vh;
+  height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Avisos de validación de las imágenes */
+.avisos-obras {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Cada aviso: fondo rojizo para que se note a simple vista */
+.aviso {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 120, 120, 0.5);
+  background: rgba(140, 30, 30, 0.35);
+  color: #ffd7d7;
+  font: 13px/1.4 system-ui, sans-serif;
+}
+
+/* Área fija de la obra: ocupa el espacio libre de la columna */
+.area-obra {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #0d0f12;
+}
+
+/* El lienzo llena el área; la imagen se centra adentro sin deformarse */
+.lienzo-obra {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Nombre de la obra, debajo del área */
+.nombre-obra {
+  margin: 0;
+  color: #f2f4f8;
+  font: 600 18px/1.3 system-ui, sans-serif;
+  text-align: center;
+}
+
+/* Ayuda de teclado */
+.ayuda-obra {
+  margin: 0;
+  color: #8a94a6;
+  font: 13px/1.3 system-ui, sans-serif;
+  text-align: center;
 }
 
 /* Columna derecha: cámara centrada en su mitad */
