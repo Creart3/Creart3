@@ -1,0 +1,25 @@
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #14161a;
+}
+
+/* Columna izquierda: reservada para la obra de arte */
+.columna-obra {
+  min-height: 100vh;
+}
+
+/* Columna derecha: cámara centrada en su mitad */
+.columna-camara {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+canvas {
+  border-radius: 8px;
+  max-width: 100%;
+  height: auto;
+}
