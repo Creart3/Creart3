@@ -315,35 +315,39 @@ function dibujarEstado() {
   const hayCamara = estadoCamara === "funcionando";
   const altoPanel = hayCamara ? 108 : 40;
 
+  // El panel de estado va pegado al borde inferior del canvas.
+  // "yPanel" es su borde de arriba: desde ahí medimos las líneas de texto.
+  const yPanel = height - altoPanel;
+
   noStroke();
   fill(0, 0, 0, 175);
-  rect(0, 0, width, altoPanel);
+  rect(0, yPanel, width, altoPanel);
 
   textAlign(LEFT, CENTER);
   textSize(14);
 
   if (!hayCamara) {
     fill(255);
-    text("Esperando permiso de cámara...", 16, 20);
+    text("Esperando permiso de cámara...", 16, yPanel + 20);
     return;
   }
 
   dibujarLineaEstado(
-    20,
+    yPanel + 20,
     textoModelo("Cuerpo", estadoCuerpo, posesDetectadas.length, "persona(s)", mensajeErrorCuerpo),
     estadoCuerpo
   );
   dibujarLineaEstado(
-    44,
+    yPanel + 44,
     textoModelo("Manos", estadoManos, manosDetectadas.length, "mano(s)", mensajeErrorManos),
     estadoManos
   );
 
   fill(255);
-  text("FPS: " + frameRate().toFixed(1), 16, 68);
+  text("FPS: " + frameRate().toFixed(1), 16, yPanel + 68);
 
   fill(180);
-  text("B: cuerpo · H: manos", 16, 92);
+  text("B: cuerpo · H: manos", 16, yPanel + 92);
 }
 
 function textoModelo(nombre, estado, cantidad, unidad, mensajeError) {
@@ -515,7 +519,8 @@ function cambiarObra(paso) {
 }
 
 // Dibuja la obra actual dentro del área fija de la izquierda.
-// La imagen se escala igual en ancho y alto: nunca se deforma.
+// El lienzo es un cuadrado y la imagen se escala igual en ancho y alto:
+// nunca se deforma y no quedan franjas negras a los costados.
 function redibujarObra() {
   const area = document.getElementById("area-obra");
   const lienzo = document.getElementById("lienzo-obra");
@@ -525,35 +530,37 @@ function redibujarObra() {
   const altoArea = area.clientHeight;
   if (anchoArea === 0 || altoArea === 0) return; // todavía no hay layout
 
-  // Ajustamos el lienzo al área y a la densidad real de la pantalla,
-  // así la imagen se ve nítida y no borrosa.
+  // Lado del cuadrado: el menor entre el ancho y el alto disponibles.
+  // Así el lienzo entra siempre completo, sin importar la forma de la ventana.
+  const lado = Math.min(anchoArea, altoArea);
+
   const densidad = window.devicePixelRatio || 1;
-  lienzo.width = Math.round(anchoArea * densidad);
-  lienzo.height = Math.round(altoArea * densidad);
+  lienzo.width = Math.round(lado * densidad);
+  lienzo.height = Math.round(lado * densidad);
+  // El CSS define cuánto se ve; el width/height de arriba son los píxeles reales.
+  lienzo.style.width = lado + "px";
+  lienzo.style.height = lado + "px";
 
   const contexto = lienzo.getContext("2d");
   contexto.setTransform(densidad, 0, 0, densidad, 0, 0);
-  contexto.clearRect(0, 0, anchoArea, altoArea);
+  contexto.clearRect(0, 0, lado, lado);
 
   const obra = obraActual();
 
   if (!obra || obra.fallo || !obra.imagen) {
-    dibujarMensajeObra(contexto, anchoArea, altoArea, "Imagen no disponible");
+    dibujarMensajeObra(contexto, lado, lado, "Imagen no disponible");
     return;
   }
 
   // Escala única para ancho y alto = proporción respetada.
-  // Con Math.min la imagen entra completa dentro del área (sin recortes).
-  const escala = Math.min(
-    anchoArea / obra.imagen.width,
-    altoArea / obra.imagen.height
-  );
+  // Con Math.min la imagen entra completa dentro del cuadrado (sin recortes).
+  const escala = Math.min(lado / obra.imagen.width, lado / obra.imagen.height);
   const anchoDibujo = obra.imagen.width * escala;
   const altoDibujo = obra.imagen.height * escala;
 
-  // Centramos la imagen dentro del área.
-  const x = (anchoArea - anchoDibujo) / 2;
-  const y = (altoArea - altoDibujo) / 2;
+  // Centramos la imagen dentro del cuadrado.
+  const x = (lado - anchoDibujo) / 2;
+  const y = (lado - altoDibujo) / 2;
 
   // p5.Image guarda sus píxeles en "imagen.canvas": lo dibujamos tal cual.
   contexto.drawImage(obra.imagen.canvas, x, y, anchoDibujo, altoDibujo);
