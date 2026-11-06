@@ -439,7 +439,8 @@ function cargarObras() {
 }
 
 // Compara el tamaño de todas las imágenes contra la primera que cargó bien.
-// Los problemas se muestran en pantalla y en la consola.
+// Las diferencias de tamaño van solo a la consola; los errores de carga
+// se muestran también en pantalla.
 function validarObras() {
   const avisos = [];
   const referencia = obras.find((obra) => !obra.fallo && obra.imagen);
@@ -470,7 +471,8 @@ function validarObras() {
         referencia.imagen.width +
         "×" +
         referencia.imagen.height;
-      avisos.push("Tamaño distinto: " + mensaje);
+      // La diferencia de tamaño solo se avisa por consola (no queremos
+      // el cartel rojo en pantalla). El error de carga sí se ve en pantalla.
       console.warn("Tamaño distinto:", mensaje);
     }
   }
