@@ -315,35 +315,39 @@ function dibujarEstado() {
   const hayCamara = estadoCamara === "funcionando";
   const altoPanel = hayCamara ? 108 : 40;
 
+  // El panel de estado va pegado al borde inferior del canvas.
+  // "yPanel" es su borde de arriba: desde ahí medimos las líneas de texto.
+  const yPanel = height - altoPanel;
+
   noStroke();
   fill(0, 0, 0, 175);
-  rect(0, 0, width, altoPanel);
+  rect(0, yPanel, width, altoPanel);
 
   textAlign(LEFT, CENTER);
   textSize(14);
 
   if (!hayCamara) {
     fill(255);
-    text("Esperando permiso de cámara...", 16, 20);
+    text("Esperando permiso de cámara...", 16, yPanel + 20);
     return;
   }
 
   dibujarLineaEstado(
-    20,
+    yPanel + 20,
     textoModelo("Cuerpo", estadoCuerpo, posesDetectadas.length, "persona(s)", mensajeErrorCuerpo),
     estadoCuerpo
   );
   dibujarLineaEstado(
-    44,
+    yPanel + 44,
     textoModelo("Manos", estadoManos, manosDetectadas.length, "mano(s)", mensajeErrorManos),
     estadoManos
   );
 
   fill(255);
-  text("FPS: " + frameRate().toFixed(1), 16, 68);
+  text("FPS: " + frameRate().toFixed(1), 16, yPanel + 68);
 
   fill(180);
-  text("B: cuerpo · H: manos", 16, 92);
+  text("B: cuerpo · H: manos", 16, yPanel + 92);
 }
 
 function textoModelo(nombre, estado, cantidad, unidad, mensajeError) {
