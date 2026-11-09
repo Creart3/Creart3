@@ -51,6 +51,8 @@ function draw() {
     dibujarCamaraEspejada();
     dibujarCuerpo();
     dibujarManos();
+    actualizarCoincidencia();
+    dibujarBordePose();
   }
 
   dibujarEstado();
@@ -186,6 +188,11 @@ function alternarManos() {
 function keyPressed() {
   if (key === "b" || key === "B") alternarCuerpo();
   if (key === "h" || key === "H") alternarManos();
+  if (key === "s" || key === "S") {
+    if (posesDetectadas.length > 0) {
+      console.log("POSE:", JSON.stringify(calcularAngulos(posesDetectadas[0])));
+    }
+  }
 
   // Flechas: cambian de obra. El "return false" evita que la página scrollee.
   if (keyCode === LEFT_ARROW) {
@@ -421,6 +428,7 @@ function cargarObras() {
     const registro = {
       archivo: obra.archivo,
       nombre: obra.nombre,
+      pose: obra.pose || null,
       ruta: "imagenes/" + obra.archivo,
       imagen: null,
       fallo: false,
@@ -578,4 +586,94 @@ function dibujarMensajeObra(contexto, ancho, alto, mensaje) {
 // Si cambia el tamaño de la ventana, el área cambia: redibujamos la obra.
 function windowResized() {
   redibujarObra();
+}
+
+// ============================================================
+// Comparación de pose
+// ============================================================
+
+// Cuántos grados de diferencia promedio aceptamos. Si es muy difícil, súbelo a 35 o 40.
+const TOLERANCIA_GRADOS = 15;
+let coincidePose = false;
+
+// Cada articulación es un ángulo formado por 3 puntos (el del medio es el vértice).
+const ARTICULACIONES = {
+  codoIzq: ["left_shoulder", "left_elbow", "left_wrist"],
+  codoDer: ["right_shoulder", "right_elbow", "right_wrist"],
+  hombroIzq: ["left_elbow", "left_shoulder", "left_hip"],
+  hombroDer: ["right_elbow", "right_shoulder", "right_hip"],
+  caderaIzq: ["left_shoulder", "left_hip", "left_knee"],
+  caderaDer: ["right_shoulder", "right_hip", "right_knee"],
+  rodillaIzq: ["left_hip", "left_knee", "left_ankle"],
+  rodillaDer: ["right_hip", "right_knee", "right_ankle"],
+};
+
+// Ángulo en grados en el punto b, entre los puntos a y c.
+function angulo(a, b, c) {
+  const v1 = { x: a.x - b.x, y: a.y - b.y };
+  const v2 = { x: c.x - b.x, y: c.y - b.y };
+  const magnitud = Math.hypot(v1.x, v1.y) * Math.hypot(v2.x, v2.y);
+  if (magnitud === 0) return null;
+  const coseno = (v1.x * v2.x + v1.y * v2.y) / magnitud;
+  return (Math.acos(Math.max(-1, Math.min(1, coseno))) * 180) / Math.PI;
+}
+
+// Devuelve los ángulos de una pose, solo con los puntos que el modelo ve bien.
+function calcularAngulos(pose) {
+  const porNombre = {};
+  for (const kp of pose.keypoints) porNombre[kp.name] = kp;
+
+  const resultado = {};
+  for (const [nombre, [a, b, c]] of Object.entries(ARTICULACIONES)) {
+    const pa = porNombre[a];
+    const pb = porNombre[b];
+    const pc = porNombre[c];
+    if (!pa || !pb || !pc) continue;
+    if (
+      pa.confidence < CONFIANZA_MINIMA ||
+      pb.confidence < CONFIANZA_MINIMA ||
+      pc.confidence < CONFIANZA_MINIMA
+    ) continue;
+
+    const grados = angulo(pa, pb, pc);
+    if (grados !== null) resultado[nombre] = Math.round(grados);
+  }
+  return resultado;
+}
+
+// Diferencia promedio (en grados) entre lo que hace la persona y la referencia.
+// Devuelve null si hay muy pocos puntos para comparar.
+function compararConReferencia(actuales, referencia) {
+  let suma = 0;
+  let cantidad = 0;
+  for (const nombre in referencia) {
+    if (actuales[nombre] === undefined) continue;
+    suma += Math.abs(actuales[nombre] - referencia[nombre]);
+    cantidad++;
+  }
+  if (cantidad < 3) return null;
+  return suma / cantidad;
+}
+
+function actualizarCoincidencia() {
+  coincidePose = false;
+  const obra = obraActual();
+  if (!obra || !obra.pose || posesDetectadas.length === 0) return;
+
+  const actuales = calcularAngulos(posesDetectadas[0]);
+  const diferencia = compararConReferencia(actuales, obra.pose);
+  coincidePose = diferencia !== null && diferencia < TOLERANCIA_GRADOS;
+}
+
+// Borde rojo mientras no coincide, verde cuando sí.
+// Solo se dibuja si la obra actual ya tiene pose guardada.
+function dibujarBordePose() {
+  const obra = obraActual();
+  if (!obra || !obra.pose) return;
+
+  noFill();
+  strokeWeight(12);
+  if (coincidePose) stroke(60, 220, 100);
+  else stroke(230, 70, 70);
+  rect(6, 6, width - 12, height - 12);
 }
