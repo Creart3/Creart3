@@ -5,6 +5,10 @@ const ALTO_CANVAS = 640;
 const ESPERA_MAXIMA_MS = 6000;
 // Solo dibujamos puntos en los que el modelo confía lo suficiente.
 const CONFIANZA_MINIMA = 0.3;
+// Cuánto hay que mantener la pose para ganar la obra.
+const TIEMPO_MANTENER_MS = 2000;
+// Cuánto se muestra el mensaje de éxito antes de pasar a la siguiente obra.
+const PAUSA_EXITO_MS = 1200;
 
 // --- Estado de la cámara ---
 // Valores posibles: "esperando" | "funcionando" | "error"
@@ -51,8 +55,11 @@ function draw() {
     dibujarCamaraEspejada();
     dibujarCuerpo();
     dibujarManos();
-    actualizarCoincidencia();
+    // Decide si estamos evaluando, conteniendo la pose o en pausa de éxito.
+    actualizarRitmoPose();
     dibujarBordePose();
+    dibujarBarraProgreso();
+    if (enPausaExito) dibujarMensajeExito();
   }
 
   dibujarEstado();
@@ -523,6 +530,8 @@ function cambiarObra(paso) {
   if (obras.length === 0) return;
 
   indiceObra = (indiceObra + paso + obras.length) % obras.length;
+  // Obra nueva: arrancamos de cero con el contador y sin pausa.
+  reiniciarRitmoPose();
   mostrarObraActual();
 }
 
@@ -665,7 +674,92 @@ function actualizarCoincidencia() {
   coincidePose = diferencia !== null && diferencia < TOLERANCIA_GRADOS;
 }
 
-// Borde rojo mientras no coincide, verde cuando sí.
+// --- Mantener la pose y pausa de éxito ---
+// null = no estamos contando. Si no, guarda en qué instante empezó a coincidir.
+let inicioMantener = null;
+// Instante en que arrancó la pausa de "¡Muy bien!"; null = pausa apagada.
+let inicioPausaExito = null;
+// ¿Estamos en la pausa de éxito? Se recalcula en cada frame.
+let enPausaExito = false;
+
+// Devuelve el avance (0 a 1) de la pose mantenida.
+function avanceMantener() {
+  if (inicioMantener === null) return 0;
+  return Math.min(1, (millis() - inicioMantener) / TIEMPO_MANTENER_MS);
+}
+
+// Vuelve al estado neutro: sin contador corriendo y sin pausa.
+function reiniciarRitmoPose() {
+  inicioMantener = null;
+  inicioPausaExito = null;
+  enPausaExito = false;
+}
+
+// Decide en qué etapa estamos y avanza los tiempos.
+// Llama a cambiarObra(1) sola cuando termina la pausa de éxito.
+function actualizarRitmoPose() {
+  // (4) Durante la pausa no se evalúa nada: solo esperamos a que termine.
+  if (inicioPausaExito !== null) {
+    enPausaExito = true;
+    if (millis() - inicioPausaExito >= PAUSA_EXITO_MS) {
+      reiniciarRitmoPose();
+      cambiarObra(1); // (3) avance automático
+    }
+    return;
+  }
+  enPausaExito = false;
+
+  // (1) Acá se evalúa la pose, como antes.
+  actualizarCoincidencia();
+
+  if (coincidePose) {
+    // Primera vez que coincide: anotamos cuándo arrancó el conteo.
+    if (inicioMantener === null) inicioMantener = millis();
+
+    // ¿Se completó el tiempo de mantener?
+    if (millis() - inicioMantener >= TIEMPO_MANTENER_MS) {
+      inicioPausaExito = millis();
+      enPausaExito = true;
+      inicioMantener = null;
+    }
+  } else {
+    // Dejó de coincidir: el contador vuelve a cero.
+    inicioMantener = null;
+  }
+}
+
+// (2) Barra verde en la parte superior del canvas de la cámara.
+// Solo se dibuja mientras se está conteniendo la pose.
+function dibujarBarraProgreso() {
+  if (inicioMantener === null || enPausaExito) return;
+
+  const margen = 18;
+  const altoBarra = 14;
+
+  // Fondo de la barra (pista completa)
+  noStroke();
+  fill(0, 0, 0, 175);
+  rect(margen, margen, width - margen * 2, altoBarra);
+
+  // Parte llenada según el avance
+  fill(60, 220, 100);
+  rect(margen, margen, (width - margen * 2) * avanceMantener(), altoBarra);
+}
+
+// (3) Mensaje de éxito en el centro de la cámara, durante la pausa.
+function dibujarMensajeExito() {
+  push();
+  textAlign(CENTER, CENTER);
+  textSize(52);
+  // Contorno oscuro para que el texto se lea sobre cualquier fondo.
+  stroke(0, 0, 0, 200);
+  strokeWeight(8);
+  fill(60, 220, 100);
+  text("¡Muy bien!", width / 2, height / 2);
+  pop();
+}
+
+// Borde rojo mientras no coincide, verde cuando sí o durante la pausa de éxito.
 // Solo se dibuja si la obra actual ya tiene pose guardada.
 function dibujarBordePose() {
   const obra = obraActual();
@@ -673,7 +767,7 @@ function dibujarBordePose() {
 
   noFill();
   strokeWeight(12);
-  if (coincidePose) stroke(60, 220, 100);
+  if (coincidePose || enPausaExito) stroke(60, 220, 100);
   else stroke(230, 70, 70);
   rect(6, 6, width - 12, height - 12);
 }
