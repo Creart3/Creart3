@@ -8,7 +8,7 @@
 // nombre:  texto que se muestra en pantalla debajo de la obra.
 const OBRAS = [
   { archivo: "Cristo_Redentor.webp", nombre: "Cristo Redentor", pose: {"codoIzq":119,"codoDer":131,"hombroIzq":68,"hombroDer":69} },
-  { archivo: "David.webp", nombre: "David", pose: {"codoIzq":129,"codoDer":80,"hombroIzq":1,"hombroDer":23}}, 
+  { archivo: "Augusto_de_Prima_Porta.webp", nombre: "Augusto de Prima Porta", pose: {"codoIzq":129,"codoDer":80,"hombroIzq":1,"hombroDer":23}}, 
   { archivo: "El_desesperado.webp", nombre: "El desesperado", pose: {"codoIzq":23,"codoDer":82,"hombroIzq":64,"hombroDer":140}},
   { archivo: "El_Discóbolo.webp", nombre: "El Discóbolo", pose: {"codoIzq":171,"codoDer":162,"hombroIzq":99,"hombroDer":26}},
   { archivo: "El_doctor_Paul_Gachet.webp", nombre: "El doctor Paul Gachet", pose: {"codoIzq":7,"codoDer":108,"hombroIzq":19,"hombroDer":31} },
