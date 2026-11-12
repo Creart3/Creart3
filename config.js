@@ -8,7 +8,7 @@
 // nombre:  texto que se muestra en pantalla debajo de la obra.
 const OBRAS = [
   { archivo: "Cristo_Redentor.webp", nombre: "Cristo Redentor" },
-  { archivo: "David.webp", nombre: "David" },
+  { archivo: "Augusto_de_Prima_Porta.webp", nombre: "Augusto de Prima Porta" },
   { archivo: "El_desesperado.webp", nombre: "El desesperado" },
   { archivo: "El_Discóbolo.webp", nombre: "El Discóbolo" },
   { archivo: "El_doctor_Paul_Gachet.webp", nombre: "El doctor Paul Gachet" },
