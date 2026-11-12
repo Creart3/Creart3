@@ -6,6 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Crearte</title>
 
+  <!-- Tipografías del encabezado (Google Fonts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400&family=Playfair+Display:wght@700&display=swap"
+    rel="stylesheet">
+
   <link rel="stylesheet" href="style.css">
 
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.10/lib/p5.min.js"></script>
@@ -16,6 +23,14 @@
 </head>
 
 <body>
+  <!-- Encabezado: va fuera del flujo (position:absolute), pero su alto está
+       reservado con --alto-encabezado (se le resta a las columnas). -->
+  <header class="encabezado">
+    <h1 class="encabezado__titulo">CREARTE</h1>
+    <span class="encabezado__linea" aria-hidden="true"></span>
+    <p class="encabezado__instruccion">Imita la pose de la obra</p>
+  </header>
+
   <div class="columna-obra">
     <!-- Avisos de imágenes que no se pudieron cargar -->
     <div class="avisos-obras" id="avisos-obras"></div>

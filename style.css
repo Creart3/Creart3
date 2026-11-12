@@ -12,6 +12,10 @@
   /* Grosor del marco de museo. Lo usan .area-obra y .marco-obra a la vez. */
   --marco: 16px;
 
+  /* Franja reservada arriba de todo para el encabezado.
+     Al body se le suma como padding y a las columnas se les resta de 100vh. */
+  --alto-encabezado: 116px;
+
   /* Veta vertical: para los parantes izquierdo y derecho.
      Frecuencia alta en X = el color cambia rápido a lo ancho, formando líneas
      que bajan; frecuencia casi nula en Y = las líneas son largas. */
@@ -28,6 +32,10 @@
 body {
   margin: 0;
   min-height: 100vh;
+  /* border-box para que el padding del encabezado no sume por encima de 100vh */
+  box-sizing: border-box;
+  /* Franja del encabezado: el muro se sigue pintando debajo */
+  padding-top: var(--alto-encabezado);
   display: grid;
   grid-template-columns: 1fr 1fr;
 
@@ -61,10 +69,56 @@ body {
   background-attachment: fixed;
 }
 
+/* Encabezado: título, línea dorada e instrucción, centrados arriba de todo.
+   Va fuera del flujo (absolute), así que no participa del grid. El alto que
+   ocupa se reserva aparte con --alto-encabezado, restándolo de las columnas. */
+.encabezado {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+}
+
+.encabezado__titulo {
+  margin: 0;
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+  line-height: 1.15;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--crema);
+}
+
+/* Línea fina dorada entre el título y la instrucción */
+.encabezado__linea {
+  display: block;
+  width: 120px;
+  height: 1px;
+  margin: 10px auto;
+  background-color: var(--dorado);
+}
+
+.encabezado__instruccion {
+  margin: 0;
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-weight: 400;
+  font-size: clamp(0.8rem, 1.1vw, 1rem);
+  letter-spacing: 0.05em;
+  color: var(--crema);
+  opacity: 0.85;
+}
+
 /* Columna izquierda: slideshow de obras */
 .columna-obra {
-  min-height: 100vh;
-  height: 100vh;
+  /* 100vh menos la franja del encabezado: así no aparece scroll vertical */
+  min-height: calc(100vh - var(--alto-encabezado));
+  height: calc(100vh - var(--alto-encabezado));
   box-sizing: border-box;
   padding: 16px;
   display: flex;
@@ -177,6 +231,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Permite medir esta columna con cqw/cqh desde la regla del canvas */
+  container-type: size;
+}
+
+/* El canvas de la cámara mide 640x640 fijos (createCanvas en sketch.js) y p5
+   escribe esos px EN LÍNEA, por eso hace falta !important para poder escalarlo.
+   Acá solo definimos cuánto ocupa en pantalla: el menor entre el ancho de la
+   columna, su alto y su tamaño nativo. height:auto mantiene el cuadrado.
+   No cambia la lógica de la cámara, solo su escala en pantallas bajas. */
+.columna-camara canvas {
+  width: min(100cqw, 100cqh, 640px) !important;
+  height: auto !important;
 }
 
 canvas {
