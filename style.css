@@ -12,6 +12,28 @@
   /* Grosor del marco de museo. Lo usan .area-obra y .marco-obra a la vez. */
   --marco: 16px;
 
+  /* Tamaño del panel. Es la ÚNICA medida del cuadrado: la usan tanto el marco
+     de la obra (izquierda) como el contenedor de la cámara (derecha), así los
+     dos quedan iguales y cuadrados.
+     Es responsive:
+       1. nunca supera 640px (tamaño nativo del canvas de la cámara: más grande
+          se vería borroso),
+       2. se achica si falta alto (100vh menos el encabezado y un margen para
+          nombre y ayuda),
+       3. y se achica si la mitad de la ventana no alcanza (50vw menos los
+          16px + 16px de padding de la columna, con 4px de margen para que un
+          redondeo subpíxel no genere una barra de scroll). */
+  --panel-size: min(
+    640px,
+    calc(100vh - var(--alto-encabezado) - 120px),
+    calc(50vw - 36px)
+  );
+
+  /* Desfase vertical del panel: padding de la columna (16px) + separación
+     entre los avisos y el área de la obra (12px). La cámara usa el mismo
+     valor para arrancar a la misma altura que el marco de la obra. */
+  --panel-desfase: 28px;
+
   /* Franja reservada arriba de todo para el encabezado.
      Al body se le suma como padding y a las columnas se les resta de 100vh. */
   --alto-encabezado: 116px;
@@ -133,7 +155,8 @@ body {
   gap: 6px;
 }
 
-/* Cada aviso: fondo rojizo para que se note a simple vista */
+/* Cada aviso: fondo rojizo para que se note a simple vista.
+   La tipografía es la del subtítulo ("Montserrat", 400); el color no se toca. */
 .aviso {
   margin: 0;
   padding: 8px 12px;
@@ -141,17 +164,27 @@ body {
   border: 1px solid rgba(255, 120, 120, 0.5);
   background: rgba(140, 30, 30, 0.35);
   color: #ffd7d7;
-  font: 13px/1.4 system-ui, sans-serif;
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
 }
 
-/* Área de la obra: se queda con el espacio libre de la columna
-   y centra el marco con el lienzo cuadrado.
-   El borde transparente "reserva" el grosor del marco: el lienzo se achica
-   justo eso y el marco nunca se sale del área. (redibujarObra() mide
-   clientWidth/clientHeight, que no incluyen bordes.) */
+/* Área de la obra: una casilla cuadrada del tamaño del panel compartido
+   (--panel-size) que centra el marco con el lienzo.
+   El borde transparente "reserva" el grosor del marco: el interior queda en
+   --panel-size - 2 * --marco, el marco de la obra se dibuja justo encima de
+   ese borde y su tamaño final es exactamente --panel-size.
+   (redibujarObra() mide clientWidth/clientHeight, que no incluyen bordes.)
+   margin-bottom: auto empuja el nombre y la ayuda al pie de la columna. */
 .area-obra {
-  flex: 1;
-  min-height: 0;
+  flex: none;
+  /* border-box: width/height incluyen el borde reservado del marco */
+  box-sizing: border-box;
+  width: var(--panel-size);
+  height: var(--panel-size);
+  margin: 0 auto auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -210,39 +243,58 @@ body {
   background: #0d0f12;
 }
 
-/* Nombre de la obra, debajo del área */
+/* Nombre de la obra, debajo del área.
+   Segundo nivel de jerarquía: usa la MISMA fuente del título
+   ("Playfair Display", 700, la que carga el <link> de Google Fonts),
+   más chica que CREARTE y en el mismo crema. */
 .nombre-obra {
   margin: 0;
-  color: #f2f4f8;
-  font: 600 18px/1.3 system-ui, sans-serif;
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1rem, 1.45vw, 1.3rem);
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  color: var(--crema);
   text-align: center;
 }
 
-/* Ayuda de teclado */
+/* Ayuda de teclado: tercer nivel. Misma fuente del subtítulo ("Montserrat",
+   400, la que carga el <link>), más chica, con letter-spacing leve y menor
+   opacidad para que no compita con el nombre de la obra. */
 .ayuda-obra {
   margin: 0;
-  color: #8a94a6;
-  font: 13px/1.3 system-ui, sans-serif;
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-weight: 400;
+  font-size: clamp(0.72rem, 1vw, 0.85rem);
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  color: var(--crema);
+  opacity: 0.65;
   text-align: center;
 }
 
-/* Columna derecha: cámara centrada en su mitad */
+/* Columna derecha: cámara alineada arriba, a la misma altura que el marco
+   de la obra de la izquierda (--panel-desfase) y centrada a lo ancho. */
 .columna-camara {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  /* Permite medir esta columna con cqw/cqh desde la regla del canvas */
-  container-type: size;
+  padding-top: var(--panel-desfase);
 }
 
 /* El canvas de la cámara mide 640x640 fijos (createCanvas en sketch.js) y p5
    escribe esos px EN LÍNEA, por eso hace falta !important para poder escalarlo.
-   Acá solo definimos cuánto ocupa en pantalla: el menor entre el ancho de la
-   columna, su alto y su tamaño nativo. height:auto mantiene el cuadrado.
-   No cambia la lógica de la cámara, solo su escala en pantallas bajas. */
+   Acá solo definimos cuánto ocupa en pantalla: exactamente --panel-size, el
+   mismo valor que el marco de la obra, así los dos paneles son iguales.
+   No cambia la resolución interna del canvas ni del video: los puntos del
+   esqueleto se siguen dibujando en coordenadas 640x640 y escalan con el CSS.
+   object-fit: cover hace que el contenido llene la casilla sin deformarse
+   (el panel y el canvas son cuadrados, así que no recorta nada). */
 .columna-camara canvas {
-  width: min(100cqw, 100cqh, 640px) !important;
-  height: auto !important;
+  display: block;
+  width: var(--panel-size) !important;
+  height: var(--panel-size) !important;
+  object-fit: cover;
 }
 
 canvas {
