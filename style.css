@@ -1,15 +1,146 @@
+/* Paleta del muro del museo.
+   --muro-oscuro es --muro con la luminosidad multiplicada por 0.55 (-45%).
+   --muro-claro es --muro con +12% de luminosidad: es el tono que usa el foco. */
+:root {
+  --muro: #660810;
+  /* Derivados recalculados desde --muro: si cambias el muro, cambian los tres. */
+  --muro-oscuro: #380409;
+  --muro-claro: #9f0c19;
+  --crema: #f3e6d0;
+  --dorado: #b8923a;
+
+  /* Grosor del marco de museo. Lo usan .area-obra y .marco-obra a la vez. */
+  --marco: 16px;
+
+  /* Tamaño del panel. Es la ÚNICA medida del cuadrado: la usan tanto el marco
+     de la obra (izquierda) como el contenedor de la cámara (derecha), así los
+     dos quedan iguales y cuadrados.
+     Es responsive:
+       1. nunca supera 640px (tamaño nativo del canvas de la cámara: más grande
+          se vería borroso),
+       2. se achica si falta alto (100vh menos el encabezado y un margen para
+          nombre y ayuda),
+       3. y se achica si la mitad de la ventana no alcanza (50vw menos los
+          16px + 16px de padding de la columna, con 4px de margen para que un
+          redondeo subpíxel no genere una barra de scroll). */
+  --panel-size: min(
+    640px,
+    calc(100vh - var(--alto-encabezado) - 120px),
+    calc(50vw - 36px)
+  );
+
+  /* Desfase vertical del panel: padding de la columna (16px) + separación
+     entre los avisos y el área de la obra (12px). La cámara usa el mismo
+     valor para arrancar a la misma altura que el marco de la obra. */
+  --panel-desfase: 28px;
+
+  /* Franja reservada arriba de todo para el encabezado.
+     Al body se le suma como padding y a las columnas se les resta de 100vh. */
+  --alto-encabezado: 116px;
+
+  /* Veta vertical: para los parantes izquierdo y derecho.
+     Frecuencia alta en X = el color cambia rápido a lo ancho, formando líneas
+     que bajan; frecuencia casi nula en Y = las líneas son largas. */
+  --veta-madera: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><filter id='v'><feTurbulence type='fractalNoise' baseFrequency='0.14 0.008' numOctaves='5' seed='9' stitchTiles='stitch'/><feColorMatrix type='luminanceToAlpha'/><feComponentTransfer><feFuncA type='linear' slope='0.34' intercept='-0.05'/></feComponentTransfer></filter><rect width='320' height='320' filter='url(%23v)'/></svg>");
+
+  /* Veta horizontal: para los listones de arriba y de abajo (ejes invertidos) */
+  --veta-madera-horizontal: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><filter id='v'><feTurbulence type='fractalNoise' baseFrequency='0.008 0.14' numOctaves='5' seed='4' stitchTiles='stitch'/><feColorMatrix type='luminanceToAlpha'/><feComponentTransfer><feFuncA type='linear' slope='0.34' intercept='-0.05'/></feComponentTransfer></filter><rect width='320' height='320' filter='url(%23v)'/></svg>");
+
+  /* Textura de yeso generada con feTurbulence: un SVG embebido como data URI,
+     sin imágenes externas. El feFuncA con slope 0.07 deja el grano casi invisible. */
+  --textura-yeso: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='r'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='linear' slope='0.07'/></feComponentTransfer></filter><rect width='180' height='180' filter='url(%23r)'/></svg>");
+}
+
 body {
   margin: 0;
   min-height: 100vh;
+  /* border-box para que el padding del encabezado no sume por encima de 100vh */
+  box-sizing: border-box;
+  /* Franja del encabezado: el muro se sigue pintando debajo */
+  padding-top: var(--alto-encabezado);
   display: grid;
   grid-template-columns: 1fr 1fr;
-  background: #14161a;
+
+  /* Pared iluminada: color base + cuatro capas encima.
+     El orden importa: la primera capa de la lista queda ARRIBA de las demás. */
+  background-color: var(--muro);
+  background-image:
+    /* 1. Grano de yeso, arriba de todo para que también se note en las zonas iluminadas */
+    var(--textura-yeso),
+    /* 2. Caída de luz desde arriba: oscurece el borde superior de la pared */
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0) 32%),
+    /* 3. Viñeta: transparente en el centro, casi negra en esquinas y bordes */
+    radial-gradient(
+      ellipse 120% 95% at 50% 55%,
+      rgba(0, 0, 0, 0) 35%,
+      rgba(0, 0, 0, 0.25) 70%,
+      rgba(0, 0, 0, 0.55) 100%
+    ),
+    /* 4. Foco: charco de luz sobre la obra (columna izquierda), del tono claro a transparente.
+       Los rgba de acá son --muro-claro (#9f0c19) con distintas opacidades. */
+    radial-gradient(
+      ellipse 55vw 70vh at 28% 42%,
+      rgba(159, 12, 25, 0.55) 0%,
+      rgba(159, 12, 25, 0.22) 40%,
+      rgba(159, 12, 25, 0) 78%
+    );
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+  background-size: 180px 180px, cover, cover, cover;
+  background-position: center, center, center, center;
+  /* Fija el muro al viewport: al hacer scroll la pared no se mueve */
+  background-attachment: fixed;
+}
+
+/* Encabezado: título, línea dorada e instrucción, centrados arriba de todo.
+   Va fuera del flujo (absolute), así que no participa del grid. El alto que
+   ocupa se reserva aparte con --alto-encabezado, restándolo de las columnas. */
+.encabezado {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+}
+
+.encabezado__titulo {
+  margin: 0;
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+  line-height: 1.15;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--crema);
+}
+
+/* Línea fina dorada entre el título y la instrucción */
+.encabezado__linea {
+  display: block;
+  width: 120px;
+  height: 1px;
+  margin: 10px auto;
+  background-color: var(--dorado);
+}
+
+.encabezado__instruccion {
+  margin: 0;
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-weight: 400;
+  font-size: clamp(0.8rem, 1.1vw, 1rem);
+  letter-spacing: 0.05em;
+  color: var(--crema);
+  opacity: 0.85;
 }
 
 /* Columna izquierda: slideshow de obras */
 .columna-obra {
-  min-height: 100vh;
-  height: 100vh;
+  /* 100vh menos la franja del encabezado: así no aparece scroll vertical */
+  min-height: calc(100vh - var(--alto-encabezado));
+  height: calc(100vh - var(--alto-encabezado));
   box-sizing: border-box;
   padding: 16px;
   display: flex;
@@ -24,7 +155,8 @@ body {
   gap: 6px;
 }
 
-/* Cada aviso: fondo rojizo para que se note a simple vista */
+/* Cada aviso: fondo rojizo para que se note a simple vista.
+   La tipografía es la del subtítulo ("Montserrat", 400); el color no se toca. */
 .aviso {
   margin: 0;
   padding: 8px 12px;
@@ -32,47 +164,137 @@ body {
   border: 1px solid rgba(255, 120, 120, 0.5);
   background: rgba(140, 30, 30, 0.35);
   color: #ffd7d7;
-  font: 13px/1.4 system-ui, sans-serif;
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
 }
 
-/* Área de la obra: se queda con el espacio libre de la columna
-   y centra el lienzo cuadrado */
+/* Área de la obra: una casilla cuadrada del tamaño del panel compartido
+   (--panel-size) que centra el marco con el lienzo.
+   El borde transparente "reserva" el grosor del marco: el interior queda en
+   --panel-size - 2 * --marco, el marco de la obra se dibuja justo encima de
+   ese borde y su tamaño final es exactamente --panel-size.
+   (redibujarObra() mide clientWidth/clientHeight, que no incluyen bordes.)
+   margin-bottom: auto empuja el nombre y la ayuda al pie de la columna. */
 .area-obra {
-  flex: 1;
-  min-height: 0;
+  flex: none;
+  /* border-box: width/height incluyen el borde reservado del marco */
+  box-sizing: border-box;
+  width: var(--panel-size);
+  height: var(--panel-size);
+  margin: 0 auto auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: var(--marco) solid transparent;
+}
+
+/* Marco de museo: nogal oscuro con veta y bisel.
+   No lleva imágenes: la veta es un SVG con feTurbulence embebido en el CSS. */
+.marco-obra {
+  position: relative;
+  /* No se encoge: ocupa justo el borde reservado por .area-obra */
+  flex: none;
+  padding: var(--marco);
+  background-color: #4a3524;
+  /* Cuatro listones, cada uno con la veta en su dirección:
+     arriba y abajo horizontales, laterales verticales. */
+  background-image:
+    var(--veta-madera-horizontal),
+    var(--veta-madera-horizontal),
+    var(--veta-madera),
+    var(--veta-madera),
+    /* Volumen del listón: más claro arriba, casi negro abajo */
+    linear-gradient(165deg, #6b4f34 0%, #4a3524 38%, #35261a 70%, #241a12 100%);
+  background-repeat: no-repeat;
+  background-size:
+    100% var(--marco),
+    100% var(--marco),
+    var(--marco) calc(100% - 2 * var(--marco)),
+    var(--marco) calc(100% - 2 * var(--marco)),
+    auto auto;
+  background-position:
+    left top,
+    left bottom,
+    left var(--marco),
+    right var(--marco),
+    0 0;
+  box-shadow:
+    /* Sombra suave sobre la pared: el marco sobresale */
+    0 20px 42px rgba(0, 0, 0, 0.52),
+    0 6px 14px rgba(0, 0, 0, 0.38),
+    /* Filo exterior que separa el marco de la pared */
+    inset 0 0 0 1px rgba(0, 0, 0, 0.65),
+    /* Bisel: la luz viene de arriba, así que arriba brilla y abajo se hunde */
+    inset 0 2px 4px rgba(255, 232, 190, 0.18),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.55);
 }
 
 /* Lienzo cuadrado: el tamaño en píxeles lo calcula redibujarObra() */
 .lienzo-obra {
   display: block;
-  border-radius: 8px;
+  /* Sin esquinas redondeadas: el marco es recto y el lienzo queda a ras */
+  border-radius: 0;
+  /* El tamaño ya lo calcula redibujarObra(): no dejamos que CSS lo recorte,
+     porque se rompería la proporción cuadrada del lienzo. */
+  max-width: none;
   background: #0d0f12;
 }
 
-/* Nombre de la obra, debajo del área */
+/* Nombre de la obra, debajo del área.
+   Segundo nivel de jerarquía: usa la MISMA fuente del título
+   ("Playfair Display", 700, la que carga el <link> de Google Fonts),
+   más chica que CREARTE y en el mismo crema. */
 .nombre-obra {
   margin: 0;
-  color: #f2f4f8;
-  font: 600 18px/1.3 system-ui, sans-serif;
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1rem, 1.45vw, 1.3rem);
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  color: var(--crema);
   text-align: center;
 }
 
-/* Ayuda de teclado */
+/* Ayuda de teclado: tercer nivel. Misma fuente del subtítulo ("Montserrat",
+   400, la que carga el <link>), más chica, con letter-spacing leve y menor
+   opacidad para que no compita con el nombre de la obra. */
 .ayuda-obra {
   margin: 0;
-  color: #8a94a6;
-  font: 13px/1.3 system-ui, sans-serif;
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-weight: 400;
+  font-size: clamp(0.72rem, 1vw, 0.85rem);
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  color: var(--crema);
+  opacity: 0.65;
   text-align: center;
 }
 
-/* Columna derecha: cámara centrada en su mitad */
+/* Columna derecha: cámara alineada arriba, a la misma altura que el marco
+   de la obra de la izquierda (--panel-desfase) y centrada a lo ancho. */
 .columna-camara {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: var(--panel-desfase);
+}
+
+/* El canvas de la cámara mide 640x640 fijos (createCanvas en sketch.js) y p5
+   escribe esos px EN LÍNEA, por eso hace falta !important para poder escalarlo.
+   Acá solo definimos cuánto ocupa en pantalla: exactamente --panel-size, el
+   mismo valor que el marco de la obra, así los dos paneles son iguales.
+   No cambia la resolución interna del canvas ni del video: los puntos del
+   esqueleto se siguen dibujando en coordenadas 640x640 y escalan con el CSS.
+   object-fit: cover hace que el contenido llene la casilla sin deformarse
+   (el panel y el canvas son cuadrados, así que no recorta nada). */
+.columna-camara canvas {
+  display: block;
+  width: var(--panel-size) !important;
+  height: var(--panel-size) !important;
+  object-fit: cover;
 }
 
 canvas {
